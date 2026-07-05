@@ -74,17 +74,37 @@ def get_plant_state(temp, soil, light, online):
     return "happy"
 
 
-def device_online(timestamp):
 
-    dt = datetime.fromisoformat(
-        timestamp.replace("Z", "+00:00")
-    )
+
+def device_online(timestamp):
+    """
+    Determine whether the ESP32 is online.
+
+    Device is considered online if the latest sensor
+    reading is within the last 10 minutes.
+    """
+
+    if timestamp is None:
+        return False
+
+    # Convert string timestamp from Supabase
+    if isinstance(timestamp, str):
+        timestamp = datetime.fromisoformat(
+            timestamp.replace("Z", "+00:00")
+        )
+
+    # If timestamp has no timezone, assume UTC
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(
+            tzinfo=timezone.utc
+        )
 
     now = datetime.now(timezone.utc)
 
-    diff = (now - dt).total_seconds()
+    diff = (now - timestamp).total_seconds()
 
-    return diff <= 180
+    # 10 minutes
+    return diff <= 600
 
 
 
