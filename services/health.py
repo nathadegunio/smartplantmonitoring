@@ -144,11 +144,10 @@ def get_plant_alerts(temp, humidity, soil, light, online):
 
 
 
-
 def device_online(timestamp):
     """
-    Returns True if the latest sensor reading
-    is within the last 10 minutes.
+    Device is online if the latest
+    reading is within the last 10 minutes.
     """
 
     if timestamp is None:
@@ -159,20 +158,46 @@ def device_online(timestamp):
             timestamp.replace("Z", "+00:00")
         )
 
-    # Assume UTC if timezone missing
     if timestamp.tzinfo is None:
         timestamp = timestamp.replace(
             tzinfo=ZoneInfo("UTC")
         )
 
-    # Convert both times to Philippine Time
     latest = timestamp.astimezone(MANILA)
 
     now = datetime.now(MANILA)
 
-    elapsed = now - latest
+    return (now - latest) <= timedelta(minutes=10)
 
-    return elapsed <= timedelta(minutes=10)
+
+# def device_online(timestamp):
+#     """
+#     Returns True if the latest sensor reading
+#     is within the last 10 minutes.
+#     """
+
+#     if timestamp is None:
+#         return False
+
+#     if isinstance(timestamp, str):
+#         timestamp = datetime.fromisoformat(
+#             timestamp.replace("Z", "+00:00")
+#         )
+
+#     # Assume UTC if timezone missing
+#     if timestamp.tzinfo is None:
+#         timestamp = timestamp.replace(
+#             tzinfo=ZoneInfo("UTC")
+#         )
+
+#     # Convert both times to Philippine Time
+#     latest = timestamp.astimezone(MANILA)
+
+#     now = datetime.now(MANILA)
+
+#     elapsed = now - latest
+
+#     return elapsed <= timedelta(minutes=10)
 
 # def device_online(timestamp):
 #     """

@@ -130,7 +130,7 @@ show_sensor_grid(latest)
 # PLANT ADVICE
 # ------------------------------------
 
-show_advice(latest)
+# show_advice(latest)
 
 # ------------------------------------
 # SENSOR TRENDS
