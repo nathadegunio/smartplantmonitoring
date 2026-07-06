@@ -3,63 +3,82 @@ import streamlit as st
 
 def show_plant(alerts):
     """
-    Display all active plant alerts.
+    Display the current chilli plant status.
+
+    - Offline has highest priority.
+    - Healthy displays only one message.
+    - Otherwise display ALL active alerts.
     """
 
-    # ------------------------
-    # Offline
-    # ------------------------
+    # ---------------------------------
+    # DEVICE OFFLINE
+    # ---------------------------------
 
     if alerts == ["offline"]:
 
         st.markdown("# 📡")
 
-        st.error("Device Offline")
+        st.error("Device Offline. No recent sensor data has been received.")
 
         return
 
-    # ------------------------
-    # Healthy
-    # ------------------------
+    # ---------------------------------
+    # HEALTHY
+    # ---------------------------------
 
     if alerts == ["happy"]:
 
         st.markdown("# 🌶️🌿")
 
-        st.success("Your chilli plant is healthy!")
+        st.success(
+            "Your chilli plant is growing under ideal environmental conditions."
+        )
 
         return
 
-    # ------------------------
-    # Multiple Alerts
-    # ------------------------
+    # ---------------------------------
+    # MULTIPLE ALERTS
+    # ---------------------------------
 
     st.markdown("# 🌶️")
 
     st.subheader("Current Plant Status")
 
+    messages = {
+
+        # Temperature
+        "cold":
+            "🥶 Temperature is too low (<24°C). Move the plant to a warmer location or protect it from cold conditions.",
+
+        "hot":
+            "🥵 Temperature is too high (>32°C). Provide shade and increase watering frequency if necessary.",
+
+        # Humidity
+        "low_humidity":
+            "💨 Humidity is too low (<50%). Increase humidity by misting or placing nearby water sources.",
+
+        "high_humidity":
+            "🌫️ Humidity is too high (>70%). Improve air circulation to reduce fungal disease risk.",
+
+        # Soil Moisture
+        "dry":
+            "🥀 Soil moisture is too low (<40%). Water the plant soon.",
+
+        "wet":
+            "💦 Soil moisture is too high (>70%). Delay watering to avoid root rot.",
+
+        # Light
+        "low_light":
+            "🌑 Light intensity is too low (<10,000 Lux). Move the plant to a brighter location or provide supplemental lighting.",
+
+        "high_light":
+            "☀️ Light intensity is very high (>50,000 Lux). Monitor for heat stress and provide shade during peak afternoon sunlight.",
+    }
+
     for alert in alerts:
 
-        if alert == "hot":
-            st.error("🥵 Temperature is too high.")
-
-        elif alert == "cold":
-            st.warning("🥶 Temperature is too low.")
-
-        elif alert == "dry":
-            st.warning("🥀 Soil moisture is too low. Water the plant.")
-
-        elif alert == "wet":
-            st.info("💦 Soil is too wet.")
-
-        elif alert == "dark":
-            st.warning("🌑 Light intensity is too low.")
-
-        elif alert == "low_humidity":
-            st.warning("💨 Air humidity is too low.")
-
-        elif alert == "high_humidity":
-            st.info("🌫️ Air humidity is too high.")
+        if alert in messages:
+            st.markdown(messages[alert])
 
 # import streamlit as st
 

@@ -59,51 +59,73 @@ def calculate_health(temp, hum, soil, light):
 
     return total
 
+
+
 def get_plant_alerts(temp, humidity, soil, light, online):
     """
-    Returns a list of active plant alerts.
-
-    Examples:
-    ['happy']
-    ['hot']
-    ['hot', 'dry']
-    ['hot', 'dry', 'dark']
-    ['offline']
+    Returns all current plant alerts based on
+    chilli pepper environmental requirements.
     """
 
-    # Offline has highest priority
+    # Device offline takes highest priority
     if not online:
         return ["offline"]
 
     alerts = []
 
+    # ----------------------------
     # Temperature
-    if temp > 32:
-        alerts.append("hot")
-    elif temp < 20:
+    # Ideal: 24–32°C
+    # ----------------------------
+
+    if temp < 24:
         alerts.append("cold")
 
+    elif temp > 32:
+        alerts.append("hot")
+
+    # ----------------------------
     # Humidity
+    # Ideal: 50–70%
+    # ----------------------------
+
     if humidity < 50:
         alerts.append("low_humidity")
-    elif humidity > 80:
+
+    elif humidity > 70:
         alerts.append("high_humidity")
 
-    # Soil
-    if soil < 30:
+    # ----------------------------
+    # Soil Moisture
+    # Ideal: 40–70%
+    # ----------------------------
+
+    if soil < 40:
         alerts.append("dry")
+
     elif soil > 70:
         alerts.append("wet")
 
-    # Light
-    if light < 50:
-        alerts.append("dark")
+    # ----------------------------
+    # Light Intensity
+    # Ideal: 10,000–50,000 Lux
+    # ----------------------------
 
+    if light < 10000:
+        alerts.append("low_light")
+
+    elif light > 50000:
+        alerts.append("high_light")
+
+    # ----------------------------
     # Healthy
+    # ----------------------------
+
     if len(alerts) == 0:
         alerts.append("happy")
 
     return alerts
+
 # def get_plant_state(temp, soil, light, online):
 
 #     if not online:
