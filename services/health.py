@@ -1,4 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+MANILA = ZoneInfo("Asia/Manila")
 
 
 def get_temperature_status(v):
@@ -78,33 +81,62 @@ def get_plant_state(temp, soil, light, online):
 
 def device_online(timestamp):
     """
-    Determine whether the ESP32 is online.
-
-    Device is considered online if the latest sensor
-    reading is within the last 10 minutes.
+    Returns True if the latest sensor reading
+    is within the last 10 minutes.
     """
 
     if timestamp is None:
         return False
 
-    # Convert string timestamp from Supabase
     if isinstance(timestamp, str):
         timestamp = datetime.fromisoformat(
             timestamp.replace("Z", "+00:00")
         )
 
-    # If timestamp has no timezone, assume UTC
+    # Assume UTC if timezone missing
     if timestamp.tzinfo is None:
         timestamp = timestamp.replace(
-            tzinfo=timezone.utc
+            tzinfo=ZoneInfo("UTC")
         )
 
-    now = datetime.now(timezone.utc)
+    # Convert both times to Philippine Time
+    latest = timestamp.astimezone(MANILA)
 
-    diff = (now - timestamp).total_seconds()
+    now = datetime.now(MANILA)
 
-    # 10 minutes
-    return diff <= 600
+    elapsed = now - latest
+
+    return elapsed <= timedelta(minutes=10)
+
+# def device_online(timestamp):
+#     """
+#     Determine whether the ESP32 is online.
+
+#     Device is considered online if the latest sensor
+#     reading is within the last 10 minutes.
+#     """
+
+#     if timestamp is None:
+#         return False
+
+#     # Convert string timestamp from Supabase
+#     if isinstance(timestamp, str):
+#         timestamp = datetime.fromisoformat(
+#             timestamp.replace("Z", "+00:00")
+#         )
+
+#     # If timestamp has no timezone, assume UTC
+#     if timestamp.tzinfo is None:
+#         timestamp = timestamp.replace(
+#             tzinfo=timezone.utc
+#         )
+
+#     now = datetime.now(timezone.utc)
+
+#     diff = (now - timestamp).total_seconds()
+
+#     # 10 minutes
+#     return diff <= 600
 
 
 
