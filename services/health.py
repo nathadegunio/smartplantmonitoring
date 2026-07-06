@@ -59,22 +59,66 @@ def calculate_health(temp, hum, soil, light):
 
     return total
 
+def get_plant_alerts(temp, humidity, soil, light, online):
+    """
+    Returns a list of active plant alerts.
 
-def get_plant_state(temp, soil, light, online):
+    Examples:
+    ['happy']
+    ['hot']
+    ['hot', 'dry']
+    ['hot', 'dry', 'dark']
+    ['offline']
+    """
 
+    # Offline has highest priority
     if not online:
-        return "offline"
+        return ["offline"]
 
-    if soil < 30:
-        return "dry"
+    alerts = []
 
+    # Temperature
     if temp > 32:
-        return "hot"
+        alerts.append("hot")
+    elif temp < 20:
+        alerts.append("cold")
 
+    # Humidity
+    if humidity < 50:
+        alerts.append("low_humidity")
+    elif humidity > 80:
+        alerts.append("high_humidity")
+
+    # Soil
+    if soil < 30:
+        alerts.append("dry")
+    elif soil > 70:
+        alerts.append("wet")
+
+    # Light
     if light < 50:
-        return "dark"
+        alerts.append("dark")
 
-    return "happy"
+    # Healthy
+    if len(alerts) == 0:
+        alerts.append("happy")
+
+    return alerts
+# def get_plant_state(temp, soil, light, online):
+
+#     if not online:
+#         return "offline"
+
+#     if soil < 30:
+#         return "dry"
+
+#     if temp > 32:
+#         return "hot"
+
+#     if light < 50:
+#         return "dark"
+
+#     return "happy"
 
 
 
