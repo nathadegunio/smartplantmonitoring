@@ -1,8 +1,11 @@
 import base64
+import logging
 
 import requests
 
 from utils.secrets import get_secret
+
+logger = logging.getLogger(__name__)
 
 # -----------------------------------------------------
 # Config
@@ -136,6 +139,11 @@ def generate_plant_insight(
     """
 
     if not GEMINI_API_KEY:
+        logger.warning(
+            "generate_plant_insight: GEMINI_API_KEY is not configured "
+            "(missing from .env locally, or from Streamlit secrets in "
+            "production) — falling back to rule-based advice."
+        )
         return None
 
     context = _build_sensor_context(
@@ -177,9 +185,24 @@ def generate_plant_insight(
         )
 
         if response.status_code != 200:
+            logger.warning(
+                "generate_plant_insight: Gemini returned HTTP %s — %s",
+                response.status_code,
+                response.text[:500],
+            )
             return None
 
-        return _extract_output_text(response.json())
+        text = _extract_output_text(response.json())
 
-    except requests.RequestException:
+        if not text:
+            logger.warning(
+                "generate_plant_insight: Gemini returned 200 but no usable "
+                "model_output text — raw response: %s",
+                response.text[:500],
+            )
+
+        return text
+
+    except requests.RequestException as exc:
+        logger.warning("generate_plant_insight: request to Gemini failed: %r", exc)
         return None
