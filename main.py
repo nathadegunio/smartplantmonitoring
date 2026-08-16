@@ -126,7 +126,7 @@ show_health(health)
 # AI PLANT INSIGHT
 # ------------------------------------
 
-show_insight(latest, plant_alerts)
+show_insight(latest, plant_alerts, history)
 
 # ------------------------------------
 # CURRENT CONDITIONS
