@@ -207,6 +207,13 @@ const unsigned long UPLOAD_SLOT_SECONDS = SENSOR_INTERVAL / 1000UL;
 // Before sync, time(nullptr) reports a small number near epoch 0.
 const time_t NTP_SANITY_THRESHOLD = 1700000000;
 
+// After every power-on/reboot, do the first reading+upload 5 minutes in
+// (giving WiFi/NTP/sensors time to settle) instead of waiting for the
+// next :00/:30 wall-clock boundary — which could be up to 30 minutes
+// away. Every upload after that first one goes back to the normal
+// NTP-aligned 30-minute schedule.
+const unsigned long BOOT_DELAY_MS = 300000UL;   // 5 minutes
+
 
 
 //=============================================================================
@@ -311,6 +318,7 @@ bool showSensorPage = true;
 
 long lastUploadSlot = -1;
 unsigned long lastFallbackUpload = 0;
+bool firstUploadDone = false;
 unsigned long lastPage = 0;
 
 
@@ -389,17 +397,36 @@ void connectWiFi()
 //=============================================================================
 // dueForUpload()
 //
-// Returns true once per 30-minute window.
-//
-// When NTP time is synced, this aligns to wall-clock :00 / :30 boundaries
-// so this board and the ESP32-CAM board upload within moments of each
-// other. Falls back to a plain millis() countdown when NTP hasn't synced
-// yet (e.g. still offline), so uploads keep happening on schedule
-// regardless of network state.
+// First cycle after boot fires once BOOT_DELAY_MS (5 min) has elapsed.
+// Every cycle after that returns true once per 30-minute window: when NTP
+// time is synced, aligned to wall-clock :00 / :30 boundaries so this board
+// and the ESP32-CAM board upload within moments of each other; falls back
+// to a plain millis() countdown when NTP hasn't synced yet (e.g. still
+// offline), so uploads keep happening on schedule regardless of network
+// state.
 //=============================================================================
 
 bool dueForUpload()
 {
+    // First cycle after boot: wait out BOOT_DELAY_MS, then fire once,
+    // regardless of NTP status. Every cycle after that follows the
+    // normal NTP-aligned (or millis()-fallback) 30-minute schedule.
+    if (!firstUploadDone)
+    {
+        if (millis() < BOOT_DELAY_MS) return false;
+
+        firstUploadDone = true;
+        lastFallbackUpload = millis();
+
+        time_t bootNow = time(nullptr);
+        if (bootNow > NTP_SANITY_THRESHOLD)
+        {
+            lastUploadSlot = bootNow / UPLOAD_SLOT_SECONDS;
+        }
+
+        return true;
+    }
+
     time_t now = time(nullptr);
 
     if (now > NTP_SANITY_THRESHOLD)

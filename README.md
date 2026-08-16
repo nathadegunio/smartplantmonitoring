@@ -8,7 +8,7 @@ A real-time IoT-based plant monitoring system for **Sili (Chili Pepper)** that c
 
 The Smart Plant Monitoring System continuously monitors the environmental conditions of a chili pepper plant and displays the data through a modern, mobile-friendly Streamlit web application.
 
-Every 30 minutes, in sync:
+Every 30 minutes, in sync (5 minutes after each power-on/reboot, then every 30 minutes after that):
 - The **ESP32 sensor board** reads temperature, humidity, soil moisture, and light, and uploads them to Supabase.
 - The **ESP32-CAM** captures a best-quality still of the plant and uploads it to Supabase Storage.
 

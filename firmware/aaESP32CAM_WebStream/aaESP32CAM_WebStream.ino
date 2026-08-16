@@ -21,9 +21,10 @@
  *   http://<ip>/size?v=8  resolution, see table on the page
  *
  * Background task (independent of the pages above):
- *   Every 30 minutes, aligned to wall-clock :00/:30 via NTP (same schedule
- *   as the esp32PlantMonitoring_multiwifi_v3 sensor board), this board
- *   grabs one best-quality still and uploads it to Supabase Storage as
+ *   5 minutes after every power-on/reboot, then every 30 minutes after
+ *   that (aligned to wall-clock :00/:30 via NTP, same schedule as the
+ *   esp32PlantMonitoring_multiwifi_v3 sensor board), this board grabs one
+ *   best-quality still and uploads it to Supabase Storage as
  *   app-files/latest.jpg (overwritten each cycle — no photo history).
  */
 
@@ -87,8 +88,16 @@ const unsigned long FALLBACK_INTERVAL_MS = UPLOAD_SLOT_SECONDS * 1000UL;
 // Sanity threshold for "has NTP actually synced" (~Nov 2023).
 const time_t NTP_SANITY_THRESHOLD = 1700000000;
 
+// After every power-on/reboot, do the first capture 5 minutes in (giving
+// WiFi/NTP/camera time to settle) instead of waiting for the next
+// :00/:30 wall-clock boundary — which could be up to 30 minutes away.
+// Every capture after that first one goes back to the normal
+// NTP-aligned 30-minute schedule.
+const unsigned long BOOT_DELAY_MS = 300000UL;   // 5 minutes
+
 long lastUploadSlot = -1;
 unsigned long lastFallbackUpload = 0;
+bool firstUploadDone = false;
 
 // ===========================
 //  AI-Thinker pinout (auto-detected on your board)
@@ -360,8 +369,25 @@ void connectWiFi() {
 // ---------------------------------------------------------------
 //  dueForUpload() — same NTP-aligned 30-minute scheduler as the
 //  sensor board, so both boards upload within moments of each other.
+//  First cycle after boot fires once BOOT_DELAY_MS (5 min) has elapsed,
+//  regardless of NTP status; every cycle after that follows the normal
+//  30-minute schedule.
 // ---------------------------------------------------------------
 bool dueForUpload() {
+  if (!firstUploadDone) {
+    if (millis() < BOOT_DELAY_MS) return false;
+
+    firstUploadDone = true;
+    lastFallbackUpload = millis();
+
+    time_t bootNow = time(nullptr);
+    if (bootNow > NTP_SANITY_THRESHOLD) {
+      lastUploadSlot = bootNow / UPLOAD_SLOT_SECONDS;
+    }
+
+    return true;
+  }
+
   time_t now = time(nullptr);
 
   if (now > NTP_SANITY_THRESHOLD) {
