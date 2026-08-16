@@ -11,6 +11,9 @@ venv/
 # Environment Variables
 .env
 
+# Firmware secrets (WiFi credentials, API keys) — see secrets.h.example
+firmware/**/secrets.h
+
 # Streamlit cache
 .streamlit/
 
