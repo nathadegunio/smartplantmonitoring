@@ -142,9 +142,9 @@ def device_online(timestamp):
 
     now = datetime.now(MANILA)
 
-    # Sensors upload every 30 minutes, so allow some buffer above that
+    # Sensors upload every 5 minutes, so allow some buffer above that
     # before flagging the device offline.
-    return (now - latest) <= timedelta(minutes=40)
+    return (now - latest) <= timedelta(minutes=15)
 
 
 # ----------------------------------------------------

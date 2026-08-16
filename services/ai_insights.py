@@ -39,6 +39,11 @@ Ideal ranges for this plant:
 - Soil moisture: 40-70%
 - Light: 10,000-50,000 lux
 
+The photo and the sensor reading are captured independently and may not be
+from the same moment — the photo is taken manually by the plant's owner
+whenever they choose, while the sensor reading comes from an automated
+station reporting every few minutes. Both timestamps are given below.
+
 Look at the photo (leaf color, wilting, posture, visible fruit/flowers, pests
 or discoloration if visible) together with the sensor readings, and write a
 short assessment for the plant's owner.
@@ -46,19 +51,23 @@ short assessment for the plant's owner.
 Rules:
 - 2 to 4 short sentences, plain language, no markdown, no headers, no bullet points.
 - Mention what you actually observe in the photo, not just the numbers.
+- If the photo and sensor timestamps are more than about 15 minutes apart, briefly
+  note that the photo may not reflect current conditions before giving your assessment.
 - End with one concrete, actionable tip.
 - If the photo doesn't show anything notable, focus on the sensor readings instead.
 """
 
 
-def _build_sensor_context(sensor_data, plant_alerts):
+def _build_sensor_context(sensor_data, plant_alerts, sensor_timestamp_ph, photo_timestamp_ph):
 
     lines = [
+        f"Sensor reading taken at: {sensor_timestamp_ph or 'unknown'}",
         f"Temperature: {sensor_data.get('temperature_c')} C",
         f"Humidity: {sensor_data.get('humidity')}%",
         f"Soil moisture: {sensor_data.get('soil_moisture')}%",
         f"Light intensity: {sensor_data.get('light_intensity')} lux",
         f"Active alerts: {', '.join(plant_alerts) if plant_alerts else 'none'}",
+        f"Photo taken at: {photo_timestamp_ph or 'no photo available'}",
     ]
 
     return "\n".join(lines)
@@ -79,18 +88,27 @@ def _extract_output_text(response_json):
     return None
 
 
-def generate_plant_insight(sensor_data, plant_alerts, image_bytes=None):
+def generate_plant_insight(
+    sensor_data,
+    plant_alerts,
+    sensor_timestamp_ph=None,
+    photo_timestamp_ph=None,
+    image_bytes=None,
+):
     """
     Calls Gemini (Interactions API) acting as a chilli-plant cultivation
     expert, given the latest sensor snapshot and (optionally) the latest
-    camera photo. Returns a short plain-text insight, or None on any
+    camera photo — each with its own timestamp, since they're captured
+    independently. Returns a short plain-text insight, or None on any
     failure so the caller can fall back to rule-based advice.
     """
 
     if not GEMINI_API_KEY:
         return None
 
-    context = _build_sensor_context(sensor_data, plant_alerts)
+    context = _build_sensor_context(
+        sensor_data, plant_alerts, sensor_timestamp_ph, photo_timestamp_ph
+    )
 
     input_parts = []
 

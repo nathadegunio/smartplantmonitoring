@@ -1,6 +1,6 @@
 # 🌱 Smart Plant Monitoring System
 
-A real-time IoT-based plant monitoring system for **Sili (Chili Pepper)** that combines an **ESP32**, environmental sensors, an **ESP32-CAM**, **Supabase** (database + storage), **Gemini AI**, and a **Streamlit** dashboard to help monitor plant health and provide intelligent care recommendations.
+A real-time IoT-based plant monitoring system for **Sili (Chili Pepper)** that combines an **ESP32**, environmental sensors, **Supabase** (database + storage), **Gemini AI**, and a **Streamlit** dashboard to help monitor plant health and provide intelligent care recommendations.
 
 ---
 
@@ -8,11 +8,11 @@ A real-time IoT-based plant monitoring system for **Sili (Chili Pepper)** that c
 
 The Smart Plant Monitoring System continuously monitors the environmental conditions of a chili pepper plant and displays the data through a modern, mobile-friendly Streamlit web application.
 
-Every 30 minutes, in sync (5 minutes after each power-on/reboot, then every 30 minutes after that):
-- The **ESP32 sensor board** reads temperature, humidity, soil moisture, and light, and uploads them to Supabase.
-- The **ESP32-CAM** captures a best-quality still of the plant and uploads it to Supabase Storage.
+Every 5 minutes (aligned to wall-clock `:00`/`:05`/`:10`... boundaries via NTP, 1 minute after each power-on/reboot), the **ESP32 sensor board** reads temperature, humidity, soil moisture, and light, and uploads them to Supabase.
 
-The dashboard retrieves the latest reading and photo, evaluates plant health, asks **Gemini** (acting as a chilli-pepper cultivation expert) to summarize the plant's current condition from the photo + sensor data, displays historical trends, and provides care recommendations.
+Plant photos are captured manually, from the dashboard itself: tap the camera button, take a photo with your phone/laptop camera, and it's uploaded straight to Supabase Storage — only the latest photo is ever kept, there's no ESP32-CAM or separate camera hardware involved.
+
+The dashboard retrieves the latest reading and photo, evaluates plant health, asks **Gemini** (acting as a chilli-pepper cultivation expert) to summarize the plant's current condition from the photo + sensor data — each with its own timestamp, since a photo you take now might not match the exact moment of the latest sensor reading — displays historical trends, and provides care recommendations.
 
 ---
 
@@ -22,8 +22,8 @@ The dashboard retrieves the latest reading and photo, evaluates plant health, as
 - 💧 Humidity Monitoring
 - 🌱 Soil Moisture Monitoring
 - ☀ Light Intensity Monitoring
-- 📷 Live Plant Camera (ESP32-CAM, latest photo every 30 min)
-- 🤖 AI Plant Insight — Gemini-generated condition summary from the latest photo + sensor snapshot
+- 📷 In-app Camera Capture — take a plant photo with your phone/laptop camera directly from the dashboard, uploaded to Supabase Storage (latest photo only)
+- 🤖 AI Plant Insight — Gemini-generated condition summary from the latest photo + latest sensor snapshot, timestamp-aware
 - ❤️ Plant Health Score
 - 📈 Historical Sensor Trends
 - 📊 Daily Statistics
@@ -41,19 +41,16 @@ The dashboard retrieves the latest reading and photo, evaluates plant health, as
 | Component | Description |
 |------------|-------------|
 | ESP32 | Sensor board microcontroller |
-| ESP32-CAM (AI-Thinker) | Camera board microcontroller |
 | DHT22 | Temperature & Humidity Sensor |
 | BH1750 | Digital Light Sensor |
 | Capacitive Soil Moisture Sensor | Soil Moisture Measurement |
 | OLED Display (SH1106) | Local Sensor Display |
 
-Firmware sketches live in this repo under `firmware/`:
-- `firmware/esp32PlantMonitoring_multiwifi_v3/esp32PlantMonitoring_multiwifi_v3.ino` — sensor board
-- `firmware/aaESP32CAM_WebStream/aaESP32CAM_WebStream.ino` — camera board (also serves a local live-view web UI on port 80/81 for testing)
+The firmware sketch lives in this repo under `firmware/esp32PlantMonitoring_multiwifi_v3/esp32PlantMonitoring_multiwifi_v3.ino`. There is no camera hardware — plant photos are captured through the web app's browser-based camera widget instead (see AI Plant Insight below).
 
-Each sketch folder reads its WiFi credentials and Supabase URL/key from a
+The sketch folder reads its WiFi credentials and Supabase URL/key from a
 `secrets.h` file, which is gitignored (same reasoning as `.env` for the web
-app — this repo is public). Before opening a sketch in Arduino IDE, copy its
+app — this repo is public). Before opening it in Arduino IDE, copy
 `secrets.h.example` to `secrets.h` in the same folder and fill in your own
 values.
 
@@ -76,10 +73,10 @@ values.
                                   │
                   ┌───────────────┴───────────────┐
                   │                               │
-          ESP32 (sensors)                 ESP32-CAM (photo)
-     DHT22 / BH1750 / Soil Sensor          best-quality JPEG
+          ESP32 (sensors)              Phone/laptop camera, via
+     DHT22 / BH1750 / Soil Sensor       the dashboard's camera button
                   │                               │
-                  │  every 30 min, NTP-aligned     │
+                  │  every 5 min, NTP-aligned      │  whenever you tap capture
                   ▼                               ▼
          Supabase: esp32_log table     Supabase Storage: app-files/latest.jpg
                   │                               │
@@ -87,7 +84,8 @@ values.
                                   ▼
                        Streamlit Web Application
                                   │
-                        Gemini AI (photo + sensors
+                        Gemini AI (photo + sensors,
+                      each with its own timestamp
                          → plant condition summary)
                                   │
                                   ▼
@@ -104,10 +102,8 @@ plantmonitoring/
 assets/
 firmware/
 │
-├── esp32PlantMonitoring_multiwifi_v3/
-│   └── esp32PlantMonitoring_multiwifi_v3.ino    Sensor board
-└── aaESP32CAM_WebStream/
-    └── aaESP32CAM_WebStream.ino                  Camera board
+└── esp32PlantMonitoring_multiwifi_v3/
+    └── esp32PlantMonitoring_multiwifi_v3.ino    Sensor board
 
 components/
 │
@@ -116,7 +112,7 @@ components/
 ├── header.py
 ├── health.py
 ├── history.py
-├── insight.py        AI Plant Insight card (photo + Gemini summary)
+├── insight.py        Camera capture widget + AI Plant Insight card
 ├── plant.py
 ├── plant_info.py
 ├── sensor_grid.py
@@ -129,7 +125,7 @@ services/
 ├── analytics.py
 ├── database.py
 ├── health.py
-└── storage.py          Latest camera photo from Supabase Storage
+└── storage.py          Upload/fetch the latest plant photo (Supabase Storage)
 
 utils/
 │
@@ -182,12 +178,15 @@ ON public.esp32_log FOR SELECT TO anon USING (true);
 
 ## Storage bucket: `app-files`
 
-The ESP32-CAM overwrites a single object, `latest.jpg`, every 30 minutes — there is no photo history, only the latest capture.
+The web app overwrites a single object, `latest.jpg`, every time you capture a new photo — there is no photo history, only the latest capture.
 
-1. In the Supabase dashboard, set the `app-files` bucket to **Public** (so the dashboard can load `latest.jpg` from a plain public URL without signed URLs).
-2. Run this in the Supabase SQL editor so the ESP32-CAM's publishable key is allowed to upload/overwrite:
+Run this in the Supabase SQL editor so the app's publishable key is allowed to upload, overwrite, and list/read this bucket (all three are required — `list()`/`download()` need SELECT even though the bucket can additionally be marked Public for convenience):
 
 ```sql
+CREATE POLICY "Policy_app_files_select"
+ON storage.objects FOR SELECT TO anon
+USING (bucket_id = 'app-files');
+
 CREATE POLICY "Policy_app_files_insert"
 ON storage.objects FOR INSERT TO anon
 WITH CHECK (bucket_id = 'app-files');
@@ -197,15 +196,17 @@ ON storage.objects FOR UPDATE TO anon
 USING (bucket_id = 'app-files');
 ```
 
-(The UPDATE policy is required because the ESP32-CAM uploads with `x-upsert: true`, overwriting the existing object instead of inserting a new one each cycle.)
+(The UPDATE policy is required because uploads use `upsert: true`, overwriting the existing object instead of inserting a new one each time.)
 
 ---
 
 # 🤖 AI Plant Insight (Gemini)
 
-`services/ai_insights.py` sends the latest photo + latest sensor readings to Gemini (`gemini-3.1-flash-lite`, via the REST **Interactions API**: `POST https://generativelanguage.googleapis.com/v1beta/interactions`), with a fixed "chilli-pepper cultivation expert" instruction prompt. The model returns a short, plain-language condition summary and one actionable tip, shown at the top of the dashboard, before the current environmental conditions.
+`components/insight.py` renders a camera capture widget (`st.camera_input`) — tap it to take a photo with your device's camera, which uploads straight to Supabase Storage (overwriting the previous photo). `services/ai_insights.py` then sends the latest photo + latest sensor readings to Gemini (`gemini-3.1-flash-lite`, via the REST **Interactions API**: `POST https://generativelanguage.googleapis.com/v1beta/interactions`), with a fixed "chilli-pepper cultivation expert" instruction prompt. The model returns a short, plain-language condition summary and one actionable tip, shown at the top of the dashboard, before the current environmental conditions.
 
-- Cached for 30 minutes (keyed on the latest reading's timestamp), so Gemini is called once per upload cycle regardless of how many people load the dashboard — this matters for staying within the free tier.
+The photo and the sensor reading are captured independently (the photo whenever you choose to take one, the sensor reading every 5 minutes automatically) and usually won't share the exact same timestamp. Both timestamps — converted to PH time — are passed to Gemini explicitly, and the prompt instructs it to note when they're more than ~15 minutes apart so the assessment doesn't silently assume a stale photo reflects current conditions.
+
+- Cached on the combination of (sensor timestamp, photo timestamp), so Gemini is only called again when either one actually changes — not on every autorefresh — which matters for staying within the free tier.
 - If Gemini is unavailable (no key, quota exceeded, network error) or no photo has been uploaded yet, the card falls back to the existing rule-based advice in `services/health.py` so the dashboard never breaks.
 
 ---
@@ -263,7 +264,7 @@ Maximum Health Score: **100%**
 
 # 📡 Device Online Status
 
-The dashboard considers the device **offline** if no reading has arrived in the last 40 minutes (30-minute upload interval + buffer for a missed cycle).
+The dashboard considers the device **offline** if no reading has arrived in the last 15 minutes (5-minute upload interval + buffer for a missed cycle).
 
 ---
 

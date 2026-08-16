@@ -16,8 +16,8 @@
  SmartPlantMonitor is an IoT-based environmental monitoring system designed
  specifically for chilli plants.
 
- Every 30 minutes (NTP-aligned with the ESP32-CAM board) the ESP32 performs
- the following tasks:
+ Every 5 minutes (aligned to wall-clock :00/:05/:10... boundaries via NTP)
+ the ESP32 performs the following tasks:
 
     1. Reads environmental sensors
          • Temperature
@@ -185,17 +185,15 @@ const float LIGHT_HIGH_LIMIT    = 50000;
 //
 //=============================================================================
 
-const unsigned long SENSOR_INTERVAL = 1800000UL;   // 30 minutes
+const unsigned long SENSOR_INTERVAL = 300000UL;   // 5 minutes
 const unsigned long PAGE_INTERVAL   = 5000UL;
 
 //=============================================================================
 // NTP Time Sync
 //
-// The ESP32-CAM board runs the same 30-minute upload schedule
-// independently. Both boards align their uploads to wall-clock time
-// (e.g. :00 and :30 past the hour) via NTP instead of counting from
-// their own boot time, so the two boards' uploads land at the same time
-// without talking to each other directly.
+// Readings are aligned to wall-clock time (e.g. :00, :05, :10... past the
+// hour) via NTP instead of counting from boot time, so upload timestamps
+// land on clean, predictable boundaries.
 //=============================================================================
 
 const long GMT_OFFSET_SEC      = 8 * 3600;   // Philippines, UTC+8
@@ -207,12 +205,11 @@ const unsigned long UPLOAD_SLOT_SECONDS = SENSOR_INTERVAL / 1000UL;
 // Before sync, time(nullptr) reports a small number near epoch 0.
 const time_t NTP_SANITY_THRESHOLD = 1700000000;
 
-// After every power-on/reboot, do the first reading+upload 5 minutes in
+// After every power-on/reboot, do the first reading+upload 1 minute in
 // (giving WiFi/NTP/sensors time to settle) instead of waiting for the
-// next :00/:30 wall-clock boundary — which could be up to 30 minutes
-// away. Every upload after that first one goes back to the normal
-// NTP-aligned 30-minute schedule.
-const unsigned long BOOT_DELAY_MS = 300000UL;   // 5 minutes
+// next :00/:05 wall-clock boundary. Every upload after that first one
+// goes back to the normal NTP-aligned 5-minute schedule.
+const unsigned long BOOT_DELAY_MS = 60000UL;   // 1 minute
 
 
 
@@ -378,8 +375,8 @@ void connectWiFi()
             Serial.print("IP: ");
             Serial.println(WiFi.localIP());
 
-            // Sync wall-clock time so uploads land on the same
-            // :00 / :30 boundaries as the ESP32-CAM board.
+            // Sync wall-clock time so upload timestamps land on
+            // clean :00 / :05 boundaries.
             configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, "pool.ntp.org", "time.google.com");
 
             return;
@@ -397,20 +394,19 @@ void connectWiFi()
 //=============================================================================
 // dueForUpload()
 //
-// First cycle after boot fires once BOOT_DELAY_MS (5 min) has elapsed.
-// Every cycle after that returns true once per 30-minute window: when NTP
-// time is synced, aligned to wall-clock :00 / :30 boundaries so this board
-// and the ESP32-CAM board upload within moments of each other; falls back
-// to a plain millis() countdown when NTP hasn't synced yet (e.g. still
-// offline), so uploads keep happening on schedule regardless of network
-// state.
+// First cycle after boot fires once BOOT_DELAY_MS (1 min) has elapsed.
+// Every cycle after that returns true once per 5-minute window: when NTP
+// time is synced, aligned to wall-clock :00 / :05 boundaries for clean,
+// predictable timestamps; falls back to a plain millis() countdown when
+// NTP hasn't synced yet (e.g. still offline), so uploads keep happening
+// on schedule regardless of network state.
 //=============================================================================
 
 bool dueForUpload()
 {
     // First cycle after boot: wait out BOOT_DELAY_MS, then fire once,
     // regardless of NTP status. Every cycle after that follows the
-    // normal NTP-aligned (or millis()-fallback) 30-minute schedule.
+    // normal NTP-aligned (or millis()-fallback) 5-minute schedule.
     if (!firstUploadDone)
     {
         if (millis() < BOOT_DELAY_MS) return false;
@@ -1172,7 +1168,7 @@ void setup()
 // The ESP32 continuously performs two independent timed tasks:
 //
 // -----------------------------------------------------------------------------
-// Task 1 (Every 30 Minutes, NTP-aligned)
+// Task 1 (Every 5 Minutes, NTP-aligned)
 //
 // • Read all sensors
 // • Evaluate chilli plant conditions
@@ -1203,7 +1199,7 @@ void loop()
     //=====================================================================
     // Sensor Update Task
     //
-    // Executes once every 30-minute window (NTP-aligned — see
+    // Executes once every 5-minute window (NTP-aligned — see
     // dueForUpload() above).
     //=====================================================================
 

@@ -4,8 +4,7 @@ PLANT_NAME = "Sili (Chili Pepper)"
 
 PLANT_LOCATION = "📍 Outdoor Yard"
 
-# Sensors + camera upload every 30 minutes, so there's no need to
-# rerun the whole page more often than that.
+# Sensors upload every 5 minutes — matches the dashboard autorefresh
+# interval so the page picks up new readings promptly without
+# rerunning more often than the data actually changes.
 REFRESH_SECONDS = 300
-
-SUPABASE_BUCKET = "app-files"
