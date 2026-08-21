@@ -4,6 +4,16 @@ A real-time IoT-based plant monitoring system for **Sili (Chili Pepper)** that c
 
 ---
 
+> ### 🎓 New here? Start with the Build Guide.
+>
+> **[📘 LearningGuide/ — how this project was built, from zero](LearningGuide/README.md)**
+>
+> An 18-chapter guide written for someone with **no background in programming, electronics, cloud, or AI**.
+> It starts at "what is a file path" and ends with you rebuilding this whole system yourself.
+> No prior computer science required.
+
+---
+
 # 📖 Overview
 
 The Smart Plant Monitoring System continuously monitors the environmental conditions of a chili pepper plant and displays the data through a modern, mobile-friendly Streamlit web application.
